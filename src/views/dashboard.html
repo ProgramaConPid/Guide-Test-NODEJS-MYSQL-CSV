@@ -1,34 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="./style.css">
-  </head>
-  <body>
-    <div class="container">
-      <h1>Dashboard</h1>
-      <button id="logoutBtn">Cerrar sesión</button>
-      <ul id="userList"></ul>
-    </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    button {
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .edit-btn {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+    }
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+    }
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 300px;
+      text-align: center;
+    }
+    .close {
+      float: right;
+      font-size: 20px;
+      cursor: pointer;
+      color: #888;
+    }
+    .close:hover {
+      color: black;
+    }
+    input {
+      width: 90%;
+      padding: 6px;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Dashboard</h1>
+    <button id="logoutBtn">Cerrar sesión</button>
 
-    <script>
-      async function loadUsers() {
-        const res = await fetch("/usuarios");
-        if (res.status === 401) return (location.href = "/login.html");
-        const users = await res.json();
-        document.getElementById("userList").innerHTML = users
-          .map((u) => `<li>${u.nombre} - ${u.email}</li>`)
-          .join("");
-      }
-      document
-        .getElementById("logoutBtn")
-        .addEventListener("click", async () => {
-          await fetch("/auth/logout", { method: "POST" });
-          location.href = "/login.html";
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <!-- Usuarios -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal edición -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <h3>Editar usuario</h3>
+      <input type="text" id="editNombre" placeholder="Nombre" />
+      <input type="email" id="editEmail" placeholder="Email" />
+      <button id="saveEditBtn" class="edit-btn">Guardar cambios</button>
+    </div>
+  </div>
+
+  <script>
+    let currentEditId = null; // Para saber a quién estamos editando
+
+    async function loadUsers() {
+      const res = await fetch("/usuarios");
+      if (res.status === 401) return (location.href = "/login.html");
+      const users = await res.json();
+
+      const tbody = document.getElementById("userTableBody");
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>${u.nombre}</td>
+          <td>${u.email}</td>
+          <td>
+            <button class="edit-btn" data-id="${u.id}" data-nombre="${u.nombre}" data-email="${u.email}">Editar</button>
+            <button class="delete-btn" data-id="${u.id}">Eliminar</button>
+          </td>
+        </tr>
+      `).join("");
+
+      // Eventos para Editar
+      document.querySelectorAll(".edit-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          currentEditId = btn.getAttribute("data-id");
+          document.getElementById("editNombre").value = btn.getAttribute("data-nombre");
+          document.getElementById("editEmail").value = btn.getAttribute("data-email");
+          document.getElementById("editModal").style.display = "block";
         });
-      loadUsers();
-    </script>
-  </body>
+      });
+
+      // Eventos para Eliminar
+      document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const userId = btn.getAttribute("data-id");
+          if (confirm("¿Seguro que deseas eliminar este usuario?")) {
+            const res = await fetch(`/usuarios/${userId}`, { method: "DELETE" });
+            if (res.ok) {
+              loadUsers();
+            } else {
+              alert("Error al eliminar usuario");
+            }
+          }
+        });
+      });
+    }
+
+    // Guardar cambios en edición
+    document.getElementById("saveEditBtn").addEventListener("click", async () => {
+      const nombre = document.getElementById("editNombre").value.trim();
+      const email = document.getElementById("editEmail").value.trim();
+      if (!nombre || !email) return alert("Todos los campos son obligatorios");
+
+      const res = await fetch(`/usuarios/${currentEditId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, email })
+      });
+
+      if (res.ok) {
+        document.getElementById("editModal").style.display = "none";
+        loadUsers();
+      } else {
+        alert("Error al actualizar usuario");
+      }
+    });
+
+    // Cerrar modal
+    document.getElementById("closeModal").addEventListener("click", () => {
+      document.getElementById("editModal").style.display = "none";
+    });
+
+    // Cerrar modal si clickea afuera
+    window.addEventListener("click", (e) => {
+      if (e.target == document.getElementById("editModal")) {
+        document.getElementById("editModal").style.display = "none";
+      }
+    });
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await fetch("/auth/logout", { method: "POST" });
+      location.href = "/login.html";
+    });
+
+    loadUsers();
+  </script>
+</body>
 </html>
