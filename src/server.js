@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import path from "path";
 import multer from "multer";
+// import { loadAllCSVs } from "./utils/csvLoader.js"; -> For various CSV Files
 import { loadCSVtoDB } from "./utils/csvLoader.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -33,6 +34,7 @@ const defaultCSV = path.join(process.cwd(), "src", "data", "usuarios.csv");
 app.listen(PORT, async () => {
   console.log(`🚀 Servidor en http://localhost:${PORT}`);
   try {
+    // await loadAllCSVs(); -> For various CSV Files
     await loadCSVtoDB(defaultCSV);
     console.log("📥 Datos masivos cargados desde usuarios.csv");
   } catch (err) {
