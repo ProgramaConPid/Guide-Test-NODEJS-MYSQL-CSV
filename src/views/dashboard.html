@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <div class="container">
+      <h1>Dashboard</h1>
+      <button id="logoutBtn">Cerrar sesión</button>
+      <ul id="userList"></ul>
+    </div>
+
+    <script>
+      async function loadUsers() {
+        const res = await fetch("/usuarios");
+        if (res.status === 401) return (location.href = "/login.html");
+        const users = await res.json();
+        document.getElementById("userList").innerHTML = users
+          .map((u) => `<li>${u.nombre} - ${u.email}</li>`)
+          .join("");
+      }
+      document
+        .getElementById("logoutBtn")
+        .addEventListener("click", async () => {
+          await fetch("/auth/logout", { method: "POST" });
+          location.href = "/login.html";
+        });
+      loadUsers();
+    </script>
+  </body>
+</html>
